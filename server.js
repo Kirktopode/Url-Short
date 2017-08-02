@@ -5,6 +5,7 @@ var express = require('express');
 var app = express();
 var dburl = "mongodb://localhost:27017/urldb";
 
+
 app.listen(8080);
 console.log("Listening on port 8080.");
 
@@ -21,9 +22,9 @@ app.get("/*", function(request, response, next){
     next();
 });
 
-app.get(/\/.+\.+/, function(request, response){
+app.get(/https?:\/\/.+\..+/, function(request, response){
     
-    var options = {
+/*    var options = {
         host: "",
         path: "/"
     };
@@ -36,28 +37,48 @@ app.get(/\/.+\.+/, function(request, response){
         options.path += item + "/";
     });
     
-/*    if(url.startsWith("https://")){
+    if(url.startsWith("https://")){
         
     }else if(url.startsWith("http://")){
         
     }else{
         
-    }*/
+    }
     
     http.get(options, function(){
-        //YOU WERK ON DIS
+        //Figure out how to check if something is a real link after
+        //I've handled the database.
     });
+    */
     
-  /*  MongoClient.connect(dburl, function(err, db){
+    var qUrl = request.url.slice(1);
+    
+    MongoClient.connect(dburl, function(err, db){
         if(err) throw err;
-    })*/
+        db.collection("links").createIndex({url: 1, index: 1});
+        db.collection("links").find().toArray(function(err, all){
+            db.collection("links").find({url: qUrl}).toArray(function(err, result){
+                if(err) throw err;
+                if(result.length == 0){
+                    var newEntry = {
+                        url: qUrl,
+                        index: = all.length;
+                    };
+                }else if(result.length == 1){
+                    
+                }else{
+                    throw new Error("Multiple entries of link " + qUrl + " !");
+                }
+            });
+        });
+    });
     response.end(request.url + " URL");
 });
 
 app.get(/\/\d+/, function(request, response){
     MongoClient.connect(dburl, function(err, db){
         if(err) throw err;
-    })
+    });
     response.end(request.url + " NUMBAHS");
 });
 
