@@ -1,10 +1,18 @@
 var MongoClient = require('mongodb').MongoClient;
-var http = require('http');
-var https = require('https');
+var path = require('path');
 var express = require('express');
 var app = express();
 var dburl = "mongodb://localhost:27017/urldb";
 
+function randomString(len){
+    var chars = "abcdefghijklmnopqrstuvwxyzABCDE" + 
+    "FGHIJKLMNOPQRSTUVWXYZ0123456789";
+    var str = "";
+    for(var i = 0; i < len; i++){
+        str += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return str;
+}
 
 app.listen(8080);
 console.log("Listening on port 8080.");
@@ -22,64 +30,62 @@ app.get("/*", function(request, response, next){
     next();
 });
 
-app.get(/https?:\/\/.+\..+/, function(request, response){
+app.get(/\/new\/https?:\/\/.+\..+/, function(request, response){
     
-/*    var options = {
-        host: "",
-        path: "/"
-    };
     
-    var url = request.url.slice(1);
-    url = url.split("/");
-    options.host = url.reverse().pop();
-    url.reverse();
-    url.forEach(function(item){
-        options.path += item + "/";
-    });
+    var qUrl = request.url.slice(5);
     
-    if(url.startsWith("https://")){
-        
-    }else if(url.startsWith("http://")){
-        
-    }else{
-        
-    }
-    
-    http.get(options, function(){
-        //Figure out how to check if something is a real link after
-        //I've handled the database.
-    });
-    */
-    
-    var qUrl = request.url.slice(1);
+    console.log("GET request for " + request.url);
     
     MongoClient.connect(dburl, function(err, db){
         if(err) throw err;
-        db.collection("links").createIndex({url: 1, index: 1});
-        db.collection("links").find().toArray(function(err, all){
-            db.collection("links").find({url: qUrl}).toArray(function(err, result){
-                if(err) throw err;
-                if(result.length == 0){
-                    var newEntry = {
-                        url: qUrl,
-                        index: = all.length;
-                    };
-                }else if(result.length == 1){
-                    
-                }else{
-                    throw new Error("Multiple entries of link " + qUrl + " !");
-                }
-            });
+        db.collection("urls").createIndex({urlShort: 1});
+        db.collection("urls").findOne({urlShort: qUrl}, function(err, result){
+            if(err) throw err;
+            if(result === null){
+                var newEntry = {
+                    urlOriginal: qUrl,
+                    urlShort: request.baseUrl + randomString(6)
+                };
+                db.collection("urls").findOne({urlShort:newEntry.urlShort}, function(err, result){
+                    if(err) throw err;
+                    if(result === null){
+                        db.collection("urls").insertOne(newEntry, function(err, result){
+                            if(err) throw err;
+                            console.log("New Entry: " + newEntry);
+                            response.end(result);
+                            db.close();
+                        })
+                    }else{
+                        result.urlOriginal = newEntry.urlOriginal;
+                        response.end(result);
+                        db.close();
+                    }
+                });
+            }else{
+                response.end(result);
+                db.close();
+            }
         });
     });
-    response.end(request.url + " URL");
 });
 
-app.get(/\/\d+/, function(request, response){
+app.get(/\/\w+/, function(request, response){
+    
+    var q = request.baseUrl + request.url;
+    console.log("GET request for " + request.url);
+    
     MongoClient.connect(dburl, function(err, db){
         if(err) throw err;
+        db.collection("urls").findOne({urlShort: q}, function(err, result){
+            if(err) throw err;
+            if(result === null){
+                response.end(q + " not found in database.");
+            }else{
+                response.redirect(response.urlOriginal);
+            }
+        });
     });
-    response.end(request.url + " NUMBAHS");
 });
 
 /*
