@@ -17,6 +17,12 @@ function randomString(len){
 app.listen(8080);
 console.log("Listening on port 8080.");
 
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  next();
+});
+
 app.get("/", function(request, response){
     response.writeHead(200, {"content-type":"text/html"});
     response.write("<h1>This is my url-shortener!</h1>");
@@ -84,7 +90,7 @@ app.get(/\/new\/https?:\/\/.+\..+/, function(request, response){
 
 app.get(/\/\w+/, function(request, response){
     
-    var q = request.protocol + "://" + request.hostname + request.url;
+    var q = request.protocol + "://" + path.join(request.hostname, request.url);
     console.log("GET request for " + request.url);
     
     MongoClient.connect(dburl, function(err, db){
