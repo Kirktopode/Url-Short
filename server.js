@@ -31,15 +31,11 @@ app.get("/", function(request, response){
     <p>New urls to be shortened should be requested in the following format:<br>
     ${request.protocol}://${request.hostname}/new/https://www.example.com</p>
     <p>Responses will be json objects like the following example: <br>
-    {urlOriginal: https://www.example.com, urlShort: ${request.protocol}
-    ://${request.hostname}/${randomString(6)}}</p>
+    <code>{"urlOriginal":"https://www.example.com","urlShort":"${request.protocol}://${request.hostname}/EVs8s2"}</code></p>
     <p>Follow the shortened url to be redirected to the original!<p>`);
     response.end();
 });
 
-app.get("/*", function(request, response, next){
-    next();
-});
 
 app.get(/\/new\/https?:\/\/.+\..+/, function(request, response){
     response.writeHead(200, {"content-type":"application/json"});
@@ -96,7 +92,7 @@ app.get(/\/new\/https?:\/\/.+\..+/, function(request, response){
 
 app.get("/new/*", function(request, response){
     response.writeHead(200, {"content-type":"text/html"});
-    response.end(request.query.slice(5) + "isn't registering " + 
+    response.end(request.url.slice(5) + "isn't registering " + 
     "as a valid URL. Remember to include the leading HTTP:// and" + 
     " to make sure it leads to a valid address.");
 });
@@ -124,7 +120,7 @@ app.get(/\/\w+/, function(request, response){
 
 app.get("/new/*", function(request, response){
     response.writeHead(200, {"content-type":"text/html"});
-    response.end(request.query.slice(1) + " isn't a valid request! " + 
+    response.end(request.url.slice(1) + " isn't a valid request! " + 
     "Please visit " + request.hostname + " for usage details.");
 });
 
