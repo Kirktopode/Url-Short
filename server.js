@@ -26,11 +26,11 @@ app.get("/", function(request, response){
 });
 
 app.get("/*", function(request, response, next){
-    response.writeHead(200, {"content-type":"application/json"});
     next();
 });
 
 app.get(/\/new\/https?:\/\/.+\..+/, function(request, response){
+    response.writeHead(200, {"content-type":"application/json"});
     
     
     var qUrl = request.url.slice(5);
@@ -40,31 +40,43 @@ app.get(/\/new\/https?:\/\/.+\..+/, function(request, response){
     MongoClient.connect(dburl, function(err, db){
         if(err) throw err;
         db.collection("urls").createIndex({urlShort: 1});
-        db.collection("urls").findOne({urlShort: qUrl}, function(err, result){
+        db.collection("urls").findOne({urlOriginal: qUrl}, function(err, result){
             if(err) throw err;
             if(result === null){
+                
+                var urlString = request.protocol + "://" + request.hostname + "/";
+                
                 var newEntry = {
                     urlOriginal: qUrl,
-                    urlShort: request.baseUrl + randomString(6)
+                    urlShort: urlString + randomString(6)
                 };
                 db.collection("urls").findOne({urlShort:newEntry.urlShort}, function(err, result){
                     if(err) throw err;
                     if(result === null){
                         db.collection("urls").insertOne(newEntry, function(err, result){
                             if(err) throw err;
-                            console.log("New Entry: " + newEntry);
-                            response.end(result);
-                            db.close();
-                        })
+                            console.log("New Entry: " + newEntry.urlOriginal + ", " + newEntry.urlShort);
+                            response.end(JSON.stringify({
+                                urlOriginal: newEntry.urlOriginal, 
+                                urlShort: newEntry.urlShort
+                            }));
+                            //db.close();
+                        });
                     }else{
                         result.urlOriginal = newEntry.urlOriginal;
-                        response.end(result);
-                        db.close();
+                        response.end(JSON.stringify({
+                            urlOriginal: result.urlOriginal, 
+                            urlShort: result.urlShort
+                        }));
+                        //db.close();
                     }
                 });
             }else{
-                response.end(result);
-                db.close();
+                response.end(JSON.stringify({
+                        urlOriginal: result.urlOriginal, 
+                        urlShort: result.urlShort
+                    }));
+                //db.close();
             }
         });
     });
@@ -72,7 +84,7 @@ app.get(/\/new\/https?:\/\/.+\..+/, function(request, response){
 
 app.get(/\/\w+/, function(request, response){
     
-    var q = request.baseUrl + request.url;
+    var q = request.protocol + "://" + request.hostname + request.url;
     console.log("GET request for " + request.url);
     
     MongoClient.connect(dburl, function(err, db){
@@ -80,9 +92,12 @@ app.get(/\/\w+/, function(request, response){
         db.collection("urls").findOne({urlShort: q}, function(err, result){
             if(err) throw err;
             if(result === null){
+                response.writeHead(200, {"content-type":"application/json"});
                 response.end(q + " not found in database.");
+                //db.close();
             }else{
-                response.redirect(response.urlOriginal);
+                //db.close();
+                response.redirect(result.urlOriginal);
             }
         });
     });
